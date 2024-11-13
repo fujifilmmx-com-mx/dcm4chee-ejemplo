@@ -1,0 +1,98 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.test</groupId>
+	<artifactId>dicom-test</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>dicom-test</name>
+	<url>http://maven.apache.org</url>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.dcm4che</groupId>
+			<artifactId>dcm4che-core</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.dcm4che</groupId>
+			<artifactId>dcm4che-net</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.dcm4che.tool</groupId>
+			<artifactId>dcm4che-tool-findscu</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.dcm4che.tool/dcm4che-tool-common -->
+		<dependency>
+			<groupId>org.dcm4che.tool</groupId>
+			<artifactId>dcm4che-tool-common</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.dcm4che.tool/dcm4che-tool-dcmqrscp -->
+		<dependency>
+			<groupId>org.dcm4che.tool</groupId>
+			<artifactId>dcm4che-tool-dcmqrscp</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.dcm4che.tool/dcm4che-tool-storescu -->
+		<dependency>
+			<groupId>org.dcm4che.tool</groupId>
+			<artifactId>dcm4che-tool-storescu</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.dcm4che.tool/dcm4che-tool-movescu -->
+		<dependency>
+			<groupId>org.dcm4che.tool</groupId>
+			<artifactId>dcm4che-tool-movescu</artifactId>
+			<version>5.33.0</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.2.3</version> <!-- Usa una versión compatible con tu versión de Java -->
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.30</version> <!-- o la versión compatible con tu sistema -->
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.gautelis/vopn -->
+<dependency>
+    <groupId>org.gautelis</groupId>
+    <artifactId>vopn</artifactId>
+    <version>2.3</version>
+</dependency>
+		
+		
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>www.dcm4che.org</id>
+			<name>dcm4che Repository</name>
+			<url>http://www.dcm4che.org/maven2</url>
+		</repository>
+	</repositories>
+
+</project>
