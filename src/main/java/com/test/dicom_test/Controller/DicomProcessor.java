@@ -1,14 +1,4 @@
-package com.test.dicom_test;
-
-import org.dcm4che3.data.Attributes;
-import org.dcm4che3.data.Tag;
-import org.dcm4che3.data.UID;
-import org.dcm4che3.data.VR;
-import org.dcm4che3.io.DicomInputStream;
-import org.dcm4che3.net.*;
-import org.dcm4che3.net.pdu.AAssociateRQ;
-import org.dcm4che3.net.pdu.PresentationContext;
-import org.dcm4che3.net.pdu.RoleSelection;
+package com.test.dicom_test.Controller;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,16 +17,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-public class App {
-	
-	private static Process process; // Referencia global al proceso
-    static String studyInstanceUID = "";
+import org.dcm4che3.data.Attributes;
+import org.dcm4che3.data.Tag;
+import org.dcm4che3.data.UID;
+import org.dcm4che3.data.VR;
+import org.dcm4che3.io.DicomInputStream;
+import org.dcm4che3.net.ApplicationEntity;
+import org.dcm4che3.net.Association;
+import org.dcm4che3.net.Connection;
+import org.dcm4che3.net.Device;
+import org.dcm4che3.net.DimseRSP;
+import org.dcm4che3.net.IncompatibleConnectionException;
+import org.dcm4che3.net.Priority;
+import org.dcm4che3.net.pdu.AAssociateRQ;
+import org.dcm4che3.net.pdu.PresentationContext;
+import org.dcm4che3.net.pdu.RoleSelection;
 
+public class DicomProcessor {
+	static String studyInstanceUID = "";
     // Ruta storescp
     static String exePath = "C:\\\\dcmtk-3.6.8\\\\bin\\\\storescp.exe";
-    
 	// Estudio
-	static String accessionNumber = "O8-36146424-1";
+	static String accessionNumber = "";
 
 	// Local
 	static String localIP = "172.16.70.203";
@@ -50,12 +52,16 @@ public class App {
 	static String remoteAETitle = "SYN7DCM";
 	static String remoteIP = "172.16.70.67";
 	static Integer remotePort = 104;
-    
-    
-    public static void main(String[] args) throws IOException, InterruptedException {
-
-    	// Configurar la entidad de aplicaciÃ³n local
-        ApplicationEntity locAE = new ApplicationEntity();
+	
+	public static ResponseDicomProcessor process(String numAcc) throws IOException, InterruptedException {
+		ResponseDicomProcessor response = new ResponseDicomProcessor(false, "Sin numero de aceso", "");
+		String folderStudyPath ="";
+		if(numAcc != "")
+			accessionNumber = numAcc;
+		else
+			return response;
+		
+		ApplicationEntity locAE = new ApplicationEntity();
         locAE.setAETitle(localAETitle);
         locAE.setInstalled(true);
         
@@ -173,6 +179,8 @@ public class App {
         assoc.release();
         
         assoc = null;
+        if(studyInstanceUID != null && studyInstanceUID != "")
+        {
 		try {
 			assoc = locAE.connect(localConn, remoteConn,assocReq);
 		} catch (IOException e) {
@@ -212,11 +220,11 @@ public class App {
         	        System.out.println("C-MOVE falló con el estado: " + Integer.toHexString(status));
         	    }
         }
-        
+        String folderTarget = "";
         System.out.println("Fin del c-move");
         if (resultMoveSCU)
         {
- 	       String folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
+ 	       folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
 	        ProcessFolder(folderTarget);
         }
         else
@@ -234,10 +242,27 @@ public class App {
 			e.printStackTrace();
 		}
         executorService.shutdown();
-
-    }
-    
-    private static void ProcessFolder(String folderTarget) {
+        folderStudyPath = folderTarget;
+		if(folderStudyPath != "") {
+			response.setMessage("El estudio " + numAcc + " esta listo");
+			response.setFolderPath(folderStudyPath);
+			response.setStatus(true);
+		}
+		else{
+			response.setMessage("Hubo un problema al procesar el estudio");
+			response.setFolderPath("");
+			response.setStatus(false);
+		}
+        }
+        else {
+        	response.setMessage("No se encontro el estudio");
+			response.setFolderPath("No se encontro el estudio");
+			response.setStatus(false);
+        }
+		return response;
+	}
+	
+	private static void ProcessFolder(String folderTarget) {
     	System.out.println("Pat: " + folderTarget);
     	Path directorioInicial = Paths.get(folderTarget); // Reemplaza con el path deseado
 
@@ -274,14 +299,14 @@ public class App {
 
         // Verificar si el puerto está abierto
         if (isPortOpen("localhost", SCPPort, 2000)) { // "localhost" y timeout de 2000 ms
-         	System.out.println("El puerto " + SCPPort + " ya está en uso. No se ejecutará el proceso.");
+        	System.out.println("El puerto " + SCPPort + " ya está en uso. No se ejecutará el proceso.");
             return;
         }
         
         try {
             // Crear comando como lista de strings
             List<String> command = Arrays.asList(
-                    exePath, "-d", "-v", "-aet", SCPAE, "-od", LocalStoragePath, "+xs" , "--sort-on-study-uid", FolderPrefix, SCPPort.toString()
+                    exePath, "-d", "-v", "-aet", SCPAE, "-od", LocalStoragePath, "+xs" ,"--sort-on-study-uid", FolderPrefix, SCPPort.toString()
             );
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -289,6 +314,7 @@ public class App {
             // Iniciar el proceso
             Process process = processBuilder.start();
             System.out.println("Programa ejecutado y ejecutándose de forma independiente.");
+
 
         } catch (IOException e) {
         	System.out.println("Error al iniciar el proceso: " + e.getMessage());
