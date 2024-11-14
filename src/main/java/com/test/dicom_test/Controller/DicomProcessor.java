@@ -37,20 +37,29 @@ public class DicomProcessor {
 	static String studyInstanceUID = "";
     // Ruta storescp
     static String exePath = "C:\\\\dcmtk-3.6.8\\\\bin\\\\storescp.exe";
-	// Estudio
+    
+    // Ruta alamcenamieto de las imagenes
+    static String LocalFolderSCP ="C:\\IMAGES";
+    
+    // Estudio
 	static String accessionNumber = "";
 
-	// Local
+	// ** Parametros locales **
+	// IP Local
 	static String localIP = "172.16.70.203";
+	// Puerto donde estaremos escuchando para alacenar
 	static Integer localPort = 1105;
+	// AE title conocido por la regla Query And Retrivee
 	static String localAETitle = "DCM4CHEE3";
-	//static String localAETitleSCU = "DCM4CHEE3SCU";
-	static String LocalFolderSCP ="C:\\IMAGES";
+	// Prefijo con el cual inicia el nombre de la carpeta que alamcena los estudios
 	static String PrefixPath = "DCM";
 
-	// Remoto
+	// ** Parametros locales **
+	// AE TITLE al que se le solicitan las imagens
 	static String remoteAETitle = "SYN7DCM";
+	// IP del servidor remoto al que se le solicitan las imagenes
 	static String remoteIP = "172.16.70.67";
+	// Puerto al que se le solicitan las imagenes
 	static Integer remotePort = 104;
 	
 	public static ResponseDicomProcessor process(String numAcc) throws IOException, InterruptedException {
