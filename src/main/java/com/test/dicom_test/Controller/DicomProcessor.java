@@ -29,20 +29,18 @@ import org.dcm4che3.net.Device;
 import org.dcm4che3.net.DimseRSP;
 import org.dcm4che3.net.IncompatibleConnectionException;
 import org.dcm4che3.net.Priority;
+import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.pdu.RoleSelection;
 
 public class DicomProcessor {
-	static String studyInstanceUID = "";
+	
     // Ruta storescp
     static String exePath = "C:\\\\dcmtk-3.6.8\\\\bin\\\\storescp.exe";
     
     // Ruta alamcenamieto de las imagenes
     static String LocalFolderSCP ="C:\\IMAGES";
-    
-    // Estudio
-	static String accessionNumber = "";
 
 	// ** Parametros locales **
 	// IP Local
@@ -63,6 +61,8 @@ public class DicomProcessor {
 	static Integer remotePort = 104;
 	
 	public static ResponseDicomProcessor process(String numAcc) throws IOException, InterruptedException {
+		// Estudio
+		String accessionNumber = "";
 		System.out.println("numAcc: " + numAcc);
 		ResponseDicomProcessor response = new ResponseDicomProcessor(false, "", "");
 		String folderStudyPath ="";
@@ -72,204 +72,107 @@ public class DicomProcessor {
 			return  new ResponseDicomProcessor(false, "Sin numero de acceso", "");
 		
 		ApplicationEntity locAE = new ApplicationEntity();
-        locAE.setAETitle(localAETitle);
-        locAE.setInstalled(true);
-        
-        Connection localConn = new Connection("loc_conn", localIP, localPort);
-        localConn.setCommonName("loc_conn");
-        localConn.setHostname(localIP);
-        localConn.setPort(localPort);
-        localConn.setProtocol(Connection.Protocol.DICOM);
-        localConn.setInstalled(true);
-        locAE.addConnection(localConn);
-        
-        
-        correrSCP(localAETitle, localPort,PrefixPath , LocalFolderSCP);
-
-        
-        // Configurar la entidad de aplicaciÃ³n remota
-        ApplicationEntity remAE = new ApplicationEntity();
-        remAE.setAETitle(remoteAETitle);
-        remAE.setInstalled(true);
-        
-        Connection remoteConn = new Connection();
-        remoteConn.setCommonName("rem_conn");
-        remoteConn.setHostname(remoteIP);
-        remoteConn.setPort(remotePort);
-        remoteConn.setProtocol(Connection.Protocol.DICOM);
-        remoteConn.setInstalled(true);
-        remAE.addConnection(remoteConn);
-
-        AAssociateRQ assocReq = new AAssociateRQ();
-        assocReq.setCalledAET(remAE.getAETitle());
-        assocReq.setCallingAET(locAE.getAETitle());
-        assocReq.setApplicationContext("1.2.840.10008.3.1.1.1");
-        assocReq.setImplClassUID("1.2.40.0.13.1.3");
-        assocReq.setImplVersionName("dcm4che-5.12.0");
-        assocReq.setMaxPDULength(16384);
-        assocReq.setMaxOpsInvoked(0);
-        assocReq.setMaxOpsPerformed(0);
-       
-        
-        assocReq.addPresentationContext(new PresentationContext(
-            1, "1.2.840.10008.1.1", "1.2.840.10008.1.2"));
-        
-        assocReq.addPresentationContext(new PresentationContext(
-            2, "1.2.840.10008.5.1.4.1.2.2.1", "1.2.840.10008.1.2"));
-        
-        assocReq.addPresentationContext(new PresentationContext(
-            3, "1.2.840.10008.1.1", "1.2.840.10008.1.2"));
-        
-        assocReq.addPresentationContext(new PresentationContext(
-            4, "1.2.840.10008.5.1.4.1.2.2.2", "1.2.840.10008.1.2"));
-        
-        assocReq.addRoleSelection(new RoleSelection(UID.Verification, /* is SCU? */ true, /* is SCP? */ false));
-
-        // Configurar el dispositivo
-        Device device = new Device("device");
-        device.addConnection(localConn);
-        device.addApplicationEntity(locAE);
-
-        // Configurar el servicio de ejecuciÃ³n
-         ExecutorService executorService = Executors.newSingleThreadExecutor();
-         ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-         device.setExecutor(executorService);
-         device.setScheduledExecutor(scheduledExecutorService);
-
-        // Configurar el almacenamiento de archivos en la carpeta especificada
-        File storageDir = new File("C:\\borrar");
-        if (!storageDir.exists()) {
-            storageDir.mkdirs();  // Crear la carpeta si no existe
-        }
-
-       // Asociacion C-FIND
-        Association assoc = null;
-		try {
-			assoc = locAE.connect(localConn, remoteConn,assocReq);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IncompatibleConnectionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (GeneralSecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-        // Configurar y ejecutar C-FIND para buscar archivos
-        Attributes keys = new Attributes();
-        keys.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY"); // Nivel de consulta
-        keys.setString(Tag.AccessionNumber, VR.SH, accessionNumber); // UID del estudio
-        keys.setString(Tag.StudyInstanceUID, VR.UI); // StudyInstanceUID
-        keys.setString(Tag.StudyDate, VR.DA); // StudyInstanceUID
-        keys.setString(Tag.PatientName, VR.PN); // StudyInstanceUID
-        
-        System.out.println("-->" );
-
-        DimseRSP rspFind = assoc.cfind(UID.StudyRootQueryRetrieveInformationModelFind,0,keys,null, 0);
-        
-        while(rspFind.next()) {
-        	 Attributes attrs = rspFind.getDataset();
-
-        	    if (attrs != null) {
-        	        // Ejemplo de obtención de campos específicos
-        	        studyInstanceUID = attrs.getString(Tag.StudyInstanceUID);
-        	        
-        	        // Almacenar en variables o procesar según tu necesidad
-        	        System.out.println("Study Instance UID: " + studyInstanceUID);
-        	    }
-        }
-        System.out.println("***StudyInstanceUID: " + studyInstanceUID);
-        System.out.println("Fin del c-find");
-        
+		locAE.setAETitle(localAETitle);
+		locAE.setInstalled(true);
+		
+		Connection localConn = new Connection("loc_conn", localIP);
+		localConn.setCommonName("loc_conn");
+		localConn.setHostname(localIP);
+		//localConn.setPort(localPort);
+		localConn.setProtocol(Connection.Protocol.DICOM);
+		localConn.setInstalled(true);
+		locAE.addConnection(localConn);
+		
+		
+		correrSCP(localAETitle, localPort,PrefixPath , LocalFolderSCP);
+		
+		
+		// Configurar la entidad de aplicaciÃ³n remota
+		ApplicationEntity remAE = new ApplicationEntity();
+		remAE.setAETitle(remoteAETitle);
+		remAE.setInstalled(true);
+		
+		Connection remoteConn = new Connection();
+		remoteConn.setCommonName("rem_conn");
+		remoteConn.setHostname(remoteIP);
+		remoteConn.setPort(remotePort);
+		remoteConn.setProtocol(Connection.Protocol.DICOM);
+		remoteConn.setInstalled(true);
+		remAE.addConnection(remoteConn);
+		
+		AAssociateRQ assocReq = new AAssociateRQ();
+		assocReq.setCalledAET(remAE.getAETitle());
+		assocReq.setCallingAET(locAE.getAETitle());
+		assocReq.setApplicationContext("1.2.840.10008.3.1.1.1");
+		assocReq.setImplClassUID("1.2.40.0.13.1.3");
+		assocReq.setImplVersionName("dcm4che-5.12.0");
+		assocReq.setMaxPDULength(16384);
+		assocReq.setMaxOpsInvoked(0);
+		assocReq.setMaxOpsPerformed(0);
+		
+		
+		assocReq.addPresentationContext(new PresentationContext(
+			1, "1.2.840.10008.1.1", "1.2.840.10008.1.2"));
+		
+		assocReq.addPresentationContext(new PresentationContext(
+			2, "1.2.840.10008.5.1.4.1.2.2.1", "1.2.840.10008.1.2"));
+		
+		assocReq.addPresentationContext(new PresentationContext(
+			3, "1.2.840.10008.1.1", "1.2.840.10008.1.2"));
+		
+		assocReq.addPresentationContext(new PresentationContext(
+			4, "1.2.840.10008.5.1.4.1.2.2.2", "1.2.840.10008.1.2"));
+		
+		assocReq.addRoleSelection(new RoleSelection(UID.Verification, /* is SCU? */ true, /* is SCP? */ false));
+		
+		// Configurar el dispositivo
+		Device device = new Device("device");
+		device.addConnection(localConn);
+		device.addApplicationEntity(locAE);
+		
+		// Configurar el servicio de ejecuciÃ³n
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
+		ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+		device.setExecutor(executorService);
+		device.setScheduledExecutor(scheduledExecutorService);
+		
+		Association assoc = null;
+		try {	
+		
+		
+		assoc = locAE.connect(localConn, remoteConn, assocReq);
+        String studyInstanceUID = executeCFind(assoc, accessionNumber);
+        System.out.println("accessionNumber: " + accessionNumber +  "---> studyInstanceUID " + studyInstanceUID );
         assoc.release();
-        
-        assoc = null;
-        if(studyInstanceUID != null && studyInstanceUID != "")
-        {
-			try {
-				assoc = locAE.connect(localConn, remoteConn,assocReq);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IncompatibleConnectionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (GeneralSecurityException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-        
-	        // studyInstanceUID = "1.2.840.113845.11.1000000002170592405.20241106100749.1037598";
-	        
-	        Attributes keysMove = new Attributes();
-	        keysMove.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY"); // Nivel de consulta
-	        keysMove.setString(Tag.StudyInstanceUID, VR.UI, studyInstanceUID); // UID del estudio
-	        
-	        Boolean resultMoveSCU = false;
-	        // Ejecutar el C-MOVE        
-	        DimseRSP result =  assoc.cmove(UID.StudyRootQueryRetrieveInformationModelMove, Priority.NORMAL, keysMove, null, locAE.getAETitle());
-	        while(result.next()) {
-	        	Attributes cmd = result.getCommand();
-        	 
-        	 
-        	    int status = cmd.getInt(Tag.Status, -1);	
-        	    if (status == 0) {
-        	        System.out.println("C-MOVE completado exitosamente.");
-        	        resultMoveSCU=true;
-        	    } else if (status == 0xFF00) {
-        	        System.out.println("C-MOVE en progreso...");
-        	    } else {
-        	        System.out.println("C-MOVE falló con el estado: " + Integer.toHexString(status));
-        	    }
+
+        if (studyInstanceUID != null && !studyInstanceUID.isEmpty()) {
+            String folderTarget = executeCMove(locAE, localConn, remoteConn, assocReq, studyInstanceUID, accessionNumber);
+            if (!folderTarget.isEmpty()) {
+                response.setMessage("El estudio " + numAcc + " está listo");
+                response.setFolderPath(folderTarget);
+                response.setStatus(true);
+            } else {
+                response.setMessage("Hubo un problema al procesar el estudio");
+                response.setStatus(false);
+            }
+        } else {
+            response.setMessage("No se encontró el estudio");
+            response.setStatus(false);
 	        }
-	        String folderTarget = "";
-	        System.out.println("Fin del c-move");
-	        if (resultMoveSCU)
-	        {
-	 	       folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
-		        ProcessFolder(folderTarget);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        response.setMessage("Error al procesar la solicitud: " + e.getMessage());
+	        response.setStatus(false);
+	    } finally {
+	        shutdownExecutors(executorService, scheduledExecutorService);
+	        if (assoc != null && assoc.isReadyForDataTransfer()) {
+	            assoc.release();
 	        }
-	        else
-	        {
-	        	System.out.println("Sin resultados en la carpeta");
-	        }
-        	
-        
-	        //	Cerrar la asociaciÃ³n despuÃ©s de la transferencia
-	        try {
-		 		//assoc.release();
-	        	assoc.release();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-	        executorService.shutdown();
-	        folderStudyPath = folderTarget;
-			if(folderStudyPath != "") {
-				response.setMessage("El estudio " + numAcc + " esta listo");
-				response.setFolderPath(folderStudyPath);
-				response.setStatus(true);
-			}
-			else{
-				response.setMessage("Hubo un problema al procesar el estudio");
-				response.setFolderPath("");
-				response.setStatus(false);
-			}
-        }
-        else {
-        	response.setMessage("No se encontro el estudio");
-			response.setFolderPath("No se encontro el estudio");
-			response.setStatus(false);
-        }
-		return response;
+	    }
+	
+	    return response;
+
+		
 	}
 	
 	private static void ProcessFolder(String folderTarget) {
@@ -295,7 +198,6 @@ public class DicomProcessor {
         } catch (IOException e) {
             e.printStackTrace();
         }
-		
 	}
 
     public static void correrSCP(String SCPAE, Integer SCPPort, String FolderPrefix, String LocalStoragePath) {
@@ -392,5 +294,116 @@ public class DicomProcessor {
 	    } catch (IOException e) {
 	        return false; // Error significa que el puerto está cerrado
 	    }
+	}
+	
+	private static ApplicationEntity configureLocalAE() {
+		System.out.println("Inciio configureLocalAE.");
+	    ApplicationEntity locAE = new ApplicationEntity();
+	    locAE.setAETitle("LOCAL_AE");
+	    locAE.setInstalled(true);
+
+	    Connection localConn = new Connection("loc_conn", "127.0.0.1");
+	    localConn.setProtocol(Connection.Protocol.DICOM);
+	    locAE.addConnection(localConn);
+	    System.out.println("Fin configureLocalAE.");
+	    return locAE;
+	}
+	
+	private static ApplicationEntity configureRemoteAE() {
+		System.out.println("Inicio configureRemoteAE.");
+	    ApplicationEntity remAE = new ApplicationEntity();
+	    remAE.setAETitle("REMOTE_AE");
+	    remAE.setInstalled(true);
+
+	    Connection remoteConn = new Connection("rem_conn", "remoteHost", 104);
+	    remoteConn.setProtocol(Connection.Protocol.DICOM);
+	    remAE.addConnection(remoteConn);
+	    System.out.println("Fin configureRemoteAE.");
+	    return remAE;
+	}
+	
+	private static AAssociateRQ createAssociationRequest(ApplicationEntity locAE, ApplicationEntity remAE) {
+		System.out.println("Inicio createAssociationRequest");
+	    AAssociateRQ assocReq = new AAssociateRQ();
+	    assocReq.setCalledAET(remAE.getAETitle());
+	    assocReq.setCallingAET(locAE.getAETitle());
+	    assocReq.addPresentationContext(new PresentationContext(1, UID.StudyRootQueryRetrieveInformationModelFind, UID.ImplicitVRLittleEndian));
+	    System.out.println("Fin createAssociationRequest");
+	    return assocReq;
+	}
+	
+	private static String executeCFind(Association assoc, String accessionNumber) throws IOException, InterruptedException {
+		System.out.println("inicio executeCFind " + accessionNumber);
+	    Attributes keys = new Attributes();
+	    keys.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY");
+		keys.setString(Tag.AccessionNumber, VR.SH, accessionNumber); // UID del estudio
+		keys.setString(Tag.StudyInstanceUID, VR.UI); // StudyInstanceUID
+		keys.setString(Tag.StudyDate, VR.DA); // StudyInstanceUID
+		keys.setString(Tag.PatientName, VR.PN); // StudyInstanceUID
+
+	    DimseRSP rspFind = assoc.cfind(UID.StudyRootQueryRetrieveInformationModelFind, Priority.NORMAL, keys, null, 0);
+	    String studyInstanceUID = null;
+
+	    while (rspFind.next()) {
+	        Attributes attrs = rspFind.getDataset();
+	        if (attrs != null) {
+	            studyInstanceUID = attrs.getString(Tag.StudyInstanceUID);
+	        }
+	    }
+	    System.out.println("Fin executeCFind " + accessionNumber);
+	    return studyInstanceUID;
+	}
+
+	private static String executeCMove(ApplicationEntity locAE, Connection localConn, Connection remoteConn, AAssociateRQ assocReq, String studyInstanceUID, String accnum) throws IOException, InterruptedException, IncompatibleConnectionException, GeneralSecurityException {
+		System.out.println("Inicio executeCMove " + accnum);
+	    Association assoc2 = locAE.connect(localConn, remoteConn, assocReq);
+	    
+	    Attributes keysMove = new Attributes();
+		keysMove.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY"); // Nivel de consulta
+		keysMove.setString(Tag.StudyInstanceUID, VR.UI, studyInstanceUID); // UID del estudio
+		System.out.println("**studyInstanceUID: " +studyInstanceUID);
+	    Boolean resultMoveSCU = false;
+		// Ejecutar el C-MOVE        
+		DimseRSP result =  assoc2.cmove(UID.StudyRootQueryRetrieveInformationModelMove, Priority.NORMAL, keysMove, null, locAE.getAETitle());
+		while(result.next()) {
+			Attributes cmd = result.getCommand();
+			int status = cmd.getInt(Tag.Status, -1);
+			if (status == 0) {
+				System.out.println("C-MOVE completado exitosamente.");
+				resultMoveSCU=true;
+			} else if (status == 0xFF00) {
+				System.out.println("C-MOVE en progreso...");
+			} else  if (status == 0xB000) {
+		        System.out.println("C-MOVE completado con fallos parciales: " + Integer.toHexString(status));
+		        // Extraer e imprimir detalles de fallas parciales.
+		        Attributes failedSuboperations = cmd.getNestedDataset(Tag.FailedSOPInstanceUIDList);
+		        if (failedSuboperations != null) {
+		            System.out.println("UIDs fallidos: " + failedSuboperations);
+		        }
+		    } else {
+		        System.out.println("C-MOVE falló con el estado: " + Integer.toHexString(status));
+		    }
+		}
+		String folderTarget = "";
+		if (resultMoveSCU)
+		{
+			System.out.println("--->studyInstanceUID: " + studyInstanceUID);
+			folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
+			System.out.println("folderTarget: " + folderTarget);
+			ProcessFolder(folderTarget);
+			System.out.println("Fin del c-move accnum");
+			return folderTarget;
+		}
+		else
+		{
+			System.out.println("Sin resultados en la carpeta");
+			System.out.println("Fin del c-move accnum");
+			return "Sin resultados en la carpeta";
+		}
+	}
+	
+	private static void shutdownExecutors(ExecutorService executor, ScheduledExecutorService scheduledExecutor) {
+	    executor.shutdown();
+	    scheduledExecutor.shutdown();
 	}
 }
