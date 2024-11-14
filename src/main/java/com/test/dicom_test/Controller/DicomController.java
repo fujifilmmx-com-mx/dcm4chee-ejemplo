@@ -22,10 +22,12 @@ public class DicomController {
 		System.out.println("--->NumAcc: " + numacc);
 		if(numacc != null && numacc != "") {			
 			ResponseDicomProcessor path = DicomProcessor.process(numacc);
+			System.out.println(path.getFolderPath());
+			System.out.println(path.getMessage());
 			if(path.getSucess())
 				return new ApiResponse<>(HttpStatus.OK.value(), "Success", path.getFolderPath());
 			else
-				return new ApiResponse<>(HttpStatus.OK.value(), "Error", path.getMessage());
+				return new ApiResponse<>(HttpStatus.OK.value(), "Error: " + path.getMessage(), path.getFolderPath() );
 		} 
 		else {
 			return new ApiResponse<>(HttpStatus.OK.value(), "Success", "Validar la informacion.");

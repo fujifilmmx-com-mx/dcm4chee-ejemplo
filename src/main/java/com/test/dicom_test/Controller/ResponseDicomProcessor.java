@@ -24,7 +24,7 @@ public class ResponseDicomProcessor {
     }
 
     public void setMessage(String message) {
-        this.folderPath = message;
+        this.message = message;
     }
     
     public String getFolderPath() {

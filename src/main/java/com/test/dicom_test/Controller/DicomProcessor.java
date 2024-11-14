@@ -63,12 +63,13 @@ public class DicomProcessor {
 	static Integer remotePort = 104;
 	
 	public static ResponseDicomProcessor process(String numAcc) throws IOException, InterruptedException {
-		ResponseDicomProcessor response = new ResponseDicomProcessor(false, "Sin numero de aceso", "");
+		System.out.println("numAcc: " + numAcc);
+		ResponseDicomProcessor response = new ResponseDicomProcessor(false, "", "");
 		String folderStudyPath ="";
 		if(numAcc != "")
 			accessionNumber = numAcc;
 		else
-			return response;
+			return  new ResponseDicomProcessor(false, "Sin numero de acceso", "");
 		
 		ApplicationEntity locAE = new ApplicationEntity();
         locAE.setAETitle(localAETitle);
@@ -190,33 +191,33 @@ public class DicomProcessor {
         assoc = null;
         if(studyInstanceUID != null && studyInstanceUID != "")
         {
-		try {
-			assoc = locAE.connect(localConn, remoteConn,assocReq);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IncompatibleConnectionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (GeneralSecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			try {
+				assoc = locAE.connect(localConn, remoteConn,assocReq);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IncompatibleConnectionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (GeneralSecurityException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         
-        // studyInstanceUID = "1.2.840.113845.11.1000000002170592405.20241106100749.1037598";
-        
-        Attributes keysMove = new Attributes();
-        keysMove.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY"); // Nivel de consulta
-        keysMove.setString(Tag.StudyInstanceUID, VR.UI, studyInstanceUID); // UID del estudio
-        
-        Boolean resultMoveSCU = false;
-        // Ejecutar el C-MOVE        
-        DimseRSP result =  assoc.cmove(UID.StudyRootQueryRetrieveInformationModelMove, Priority.NORMAL, keysMove, null, locAE.getAETitle());
-        while(result.next()) {
-        	 Attributes cmd = result.getCommand();
+	        // studyInstanceUID = "1.2.840.113845.11.1000000002170592405.20241106100749.1037598";
+	        
+	        Attributes keysMove = new Attributes();
+	        keysMove.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY"); // Nivel de consulta
+	        keysMove.setString(Tag.StudyInstanceUID, VR.UI, studyInstanceUID); // UID del estudio
+	        
+	        Boolean resultMoveSCU = false;
+	        // Ejecutar el C-MOVE        
+	        DimseRSP result =  assoc.cmove(UID.StudyRootQueryRetrieveInformationModelMove, Priority.NORMAL, keysMove, null, locAE.getAETitle());
+	        while(result.next()) {
+	        	Attributes cmd = result.getCommand();
         	 
         	 
         	    int status = cmd.getInt(Tag.Status, -1);	
@@ -228,40 +229,40 @@ public class DicomProcessor {
         	    } else {
         	        System.out.println("C-MOVE fall� con el estado: " + Integer.toHexString(status));
         	    }
-        }
-        String folderTarget = "";
-        System.out.println("Fin del c-move");
-        if (resultMoveSCU)
-        {
- 	       folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
-	        ProcessFolder(folderTarget);
-        }
-        else
-        {
-        	System.out.println("Sin resultados en la carpeta");
-        }
+	        }
+	        String folderTarget = "";
+	        System.out.println("Fin del c-move");
+	        if (resultMoveSCU)
+	        {
+	 	       folderTarget = LocalFolderSCP + "\\" + PrefixPath + "_" + studyInstanceUID + "\\";
+		        ProcessFolder(folderTarget);
+	        }
+	        else
+	        {
+	        	System.out.println("Sin resultados en la carpeta");
+	        }
         	
         
-         //Cerrar la asociación después de la transferencia
-        try {
-	 		//assoc.release();
-        	assoc.release();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        executorService.shutdown();
-        folderStudyPath = folderTarget;
-		if(folderStudyPath != "") {
-			response.setMessage("El estudio " + numAcc + " esta listo");
-			response.setFolderPath(folderStudyPath);
-			response.setStatus(true);
-		}
-		else{
-			response.setMessage("Hubo un problema al procesar el estudio");
-			response.setFolderPath("");
-			response.setStatus(false);
-		}
+	        //	Cerrar la asociación después de la transferencia
+	        try {
+		 		//assoc.release();
+	        	assoc.release();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        executorService.shutdown();
+	        folderStudyPath = folderTarget;
+			if(folderStudyPath != "") {
+				response.setMessage("El estudio " + numAcc + " esta listo");
+				response.setFolderPath(folderStudyPath);
+				response.setStatus(true);
+			}
+			else{
+				response.setMessage("Hubo un problema al procesar el estudio");
+				response.setFolderPath("");
+				response.setStatus(false);
+			}
         }
         else {
         	response.setMessage("No se encontro el estudio");
