@@ -218,7 +218,7 @@ public class DicomProcessor {
         try {
             // Crear comando como lista de strings
             List<String> command = Arrays.asList(
-                    exePath, "-d", "-v", "-aet", SCPAE, "-od", LocalStoragePath, "+xs" ,"--sort-on-study-uid", FolderPrefix, SCPPort.toString()
+                    exePath, "-d", "-v", "-aet", SCPAE, "-od", LocalStoragePath, "+xs", "--fork" ,"--sort-on-study-uid", FolderPrefix, SCPPort.toString()
             );
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
